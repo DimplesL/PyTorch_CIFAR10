@@ -33,15 +33,15 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
+            self,
+            inplanes,
+            planes,
+            stride=1,
+            downsample=None,
+            groups=1,
+            base_width=64,
+            dilation=1,
+            norm_layer=None,
     ):
         super(BasicBlock, self).__init__()
         if norm_layer is None:
@@ -82,15 +82,15 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
+            self,
+            inplanes,
+            planes,
+            stride=1,
+            downsample=None,
+            groups=1,
+            base_width=64,
+            dilation=1,
+            norm_layer=None,
     ):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
@@ -132,15 +132,15 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(
-        self,
-        block,
-        layers,
-        num_classes=10,
-        zero_init_residual=False,
-        groups=1,
-        width_per_group=64,
-        replace_stride_with_dilation=None,
-        norm_layer=None,
+            self,
+            block,
+            layers,
+            num_classes=10,
+            zero_init_residual=False,
+            groups=1,
+            width_per_group=64,
+            replace_stride_with_dilation=None,
+            norm_layer=None,
     ):
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -259,45 +259,58 @@ class ResNet(nn.Module):
         return x
 
 
-def _resnet(arch, block, layers, pretrained, progress, device, **kwargs):
-    model = ResNet(block, layers, **kwargs)
+def _resnet(arch, block, layers, pretrained, num_classes, progress, device, **kwargs):
+    model = ResNet(block, layers, num_classes, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
         state_dict = torch.load(
-            script_dir + "/state_dicts/" + arch + ".pt", map_location=device
+            script_dir + "/../state_dicts/" + arch + ".pt", map_location=device
         )
-        model.load_state_dict(state_dict)
+        model_dict = model.state_dict()
+        # 重新制作预训练的权重，主要是减去参数不匹配的层，楼主这边层名为“fc”
+        state_dict = {k: v for k, v in state_dict.items() if (k in model_dict and 'fc' not in k)}
+        # 更新权重
+        model_dict.update(state_dict)
+        model.load_state_dict(model_dict, strict=False)
+        # model.load_state_dict(state_dict, strict=False)
     return model
 
 
-def resnet18(pretrained=False, progress=True, device="cpu", **kwargs):
+def resnet18(num_classes, pretrained=False, progress=True, device="cpu", **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet(
-        "resnet18", BasicBlock, [2, 2, 2, 2], pretrained, progress, device, **kwargs
+        "resnet18", BasicBlock, [2, 2, 2, 2], pretrained, num_classes, progress, device, **kwargs
     )
 
 
-def resnet34(pretrained=False, progress=True, device="cpu", **kwargs):
+def resnet34(num_classes, pretrained=False, progress=True, device="cpu", **kwargs):
     """Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet(
-        "resnet34", BasicBlock, [3, 4, 6, 3], pretrained, progress, device, **kwargs
+        "resnet34", BasicBlock, [3, 4, 6, 3], pretrained, num_classes, progress, device, **kwargs
     )
 
 
-def resnet50(pretrained=False, progress=True, device="cpu", **kwargs):
+def resnet50(num_classes, pretrained=False, progress=True, device="cpu", **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet(
-        "resnet50", Bottleneck, [3, 4, 6, 3], pretrained, progress, device, **kwargs
+        "resnet50", Bottleneck, [3, 4, 6, 3], pretrained, num_classes, progress, device, **kwargs
     )
+
+
+if __name__ == '__main__':
+
+    model = resnet18(11)
+    tmp = torch.ones((1, 3, 32, 32))
+    print(model(tmp))

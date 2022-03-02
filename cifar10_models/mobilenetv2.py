@@ -123,7 +123,7 @@ class MobileNetV2(nn.Module):
         return x
 
 
-def mobilenet_v2(pretrained=False, progress=True, device="cpu", **kwargs):
+def mobilenet_v2(num_classes, pretrained=False, progress=True, device="cpu", **kwargs):
     """
     Constructs a MobileNetV2 architecture from
     `"MobileNetV2: Inverted Residuals and Linear Bottlenecks" <https://arxiv.org/abs/1801.04381>`_.
@@ -132,11 +132,17 @@ def mobilenet_v2(pretrained=False, progress=True, device="cpu", **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = MobileNetV2(**kwargs)
+    model = MobileNetV2(num_classes, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
         state_dict = torch.load(
-            script_dir + "/state_dicts/mobilenet_v2.pt", map_location=device
+            script_dir + "/../state_dicts/mobilenet_v2.pt", map_location=device
         )
-        model.load_state_dict(state_dict)
+        model_dict = model.state_dict()
+        # 重新制作预训练的权重，主要是减去参数不匹配的层，楼主这边层名为“fc”
+        state_dict = {k: v for k, v in state_dict.items() if (k in model_dict and 'classifier' not in k)}
+        # 更新权重
+        model_dict.update(state_dict)
+        model.load_state_dict(model_dict, strict=False)
+        # model.load_state_dict(state_dict, strict=False)
     return model
